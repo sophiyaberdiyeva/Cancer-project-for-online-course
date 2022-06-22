@@ -1,0 +1,174 @@
+---
+title: "Влияние витамина С на поддержание жизни больных онкологическими заболеваниями"
+author: "С. А. Бердыева"
+date: "9 июля 2021"
+output: 
+  html_document:
+    toc: true 
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy = FALSE, warning = FALSE)
+```
+## Введение
+Исследования применения витамина C в лечении онкологических заболеваний имеют большое значение для медицинской науки, так как в нем может заключаться эффективное средство терапии данного комплекса заболеваний[3]. В представленном проекте внимание исследователей было сконцентрировано на продлении жизни уже болеющих раком пациентов, и главный акцент был сделан на эффективности витамина С при поддержании жизни больных раком груди по сравнению с этим же показателем для больных другими видами онкологических заболеваний (раком желудка, бронхов, кишечника и яичников). Таким образом, независимой переменной выступил вид рака, а зависимой время выживания с момента диагностировния болезни и начала приема витамина С. Главной гипотезой исследователей было утверждение о наличии значимых различий в продолжительности периода, пока человек жив во время приема аскорбата (витамина С), у больных раком груди и у больных другими видами рака. При вычислениях уровень значимости был равен 0.05.
+
+## Материалы и методы.
+Все расчеты проводились в среде R с использованием пакетов readxl, car, ggplot2 и cowplot. 
+Данные были получены в документе формата .xlsx неупорядоченными по алфавиту в переменной "Орган". Значения этой переменной превратили в факторы.
+```{r}
+library(readxl)
+cancer_data<-read_excel('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/data/cancer.xlsx')
+sum(is.na(cancer_data))
+#Пропущенных значений нет.
+cancer_data$Organ <- factor(cancer_data$Organ,
+                            levels = c('Breast', 'Bronchus', 'Colon','Ovary', 'Stomach'),
+                            ordered=FALSE)
+```
+Проведено четыре двухвыборочных t-теста Уэлча [4], в каждом из которых последовательно сравнивается время выживания больных раком груди и больных раком бронхов, кишечника, яичников и желудка. Для того, чтобы оценить применимость этого теста, проверили соблюдение необходимых критериев:
+
+1) Наблюдения независимы друг от друга - выполняется, так как отбор пациентов проводился из определенного множества неизлечимо больных (генеральная совокупность) случайным образом и с учетом наличия необходимой информации об истории болезни [2]. Также при статистической обработке предполагалось, что у каждого из больных был только один вид ракового заболевания.
+
+2) Выборки независимы друг от друга - выполняется, поскольку данные в каждой из них брали у разных пациентов.
+
+3) Объем выборки достаточно велик или величины распределены нормально:
+```{r}
+#Объемы выборок:
+table(cancer_data$Organ)
+```
+Как можно видеть, объем каждой из выборок мал.
+При построении квантильных графиков изначальных распределений было обнаружено большое количество выбросов, поэтому принято решение проводить расчеты над величинами, равными квадратному корню из имеющихся данных. Это позволит привести выборки к виду, более близкому к нормальному (рис. 1), при этом никак не повлияв на результаты статистических вычислений.
+```{r}
+# Создадим переменные с соответствующими значениями времени выживания для каждого из видов рака
+surv_breast <- c(cancer_data$Survival[cancer_data$Organ=='Breast'])
+surv_bronchus <- c(cancer_data$Survival[cancer_data$Organ=='Bronchus'])
+surv_colon <- c(cancer_data$Survival[cancer_data$Organ=='Colon'])
+surv_ovary <- c(cancer_data$Survival[cancer_data$Organ=='Ovary'])
+surv_stomach <- c(cancer_data$Survival[cancer_data$Organ=='Stomach'])
+library(car)
+# Вычислим квадратный корень из всех значений и занесем их в новые переменные
+sq_surv_breast <- sqrt(surv_breast)
+sq_surv_bronchus <-sqrt(surv_bronchus)
+sq_surv_colon <- sqrt(surv_colon)
+sq_surv_ovary <- sqrt(surv_ovary)
+sq_surv_stomach <- sqrt(surv_stomach)
+```
+```{r, eval = FALSE}
+# Построим квантильные графики полученных распределений для проверки на нормальность
+qq_sqbreast <- qqPlot(sq_surv_breast,main = 'Рак груди',
+                      xlab = 'Квантили нормального распределения',
+                      ylab = 'Корень из числа дней, прожитых пациентом')
+qq_sqbron <- qqPlot(sq_surv_bronchus,main = 'Рак бронхов',
+                    xlab = 'Квантили нормального распределения',
+                    ylab = 'Корень из числа дней, прожитых пациентом')
+qq_sqcol <- qqPlot(sq_surv_colon,main = 'Рак кишечника',
+                   xlab = 'Квантили нормального распределения',
+                   ylab = 'Корень из числа дней, прожитых пациентом')
+qq_sqova <- qqPlot(sq_surv_ovary,main = 'Рак яичников',
+                   xlab = 'Квантили нормального распределения', 
+                   ylab = 'Корень из числа дней, прожитых пациентом')
+qq_sqstom <- qqPlot(sq_surv_stomach,main = 'Рак желудка', 
+                    xlab = 'Квантили нормального распределения', 
+                    ylab = 'Корень из числа дней, прожитых пациентом')
+```
+**Рис.1. Квантильные графики распределений значений квадратного корня из числа дней, прожитых больными различными видами рака.**
+
+```{r, eval=TRUE, echo=FALSE, out.width = '360px'}
+knitr::include_graphics('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/cancer_plots/cancer_breast.png')
+knitr::include_graphics('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/cancer_plots/cancer_bronchs.png')
+knitr::include_graphics('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/cancer_plots/cancer_colon.png')
+knitr::include_graphics('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/cancer_plots/cancer_ovary.png')
+knitr::include_graphics('C:/Users/Sofiya/Documents/R/Coursera/Linmodr/cancer_plots/cancer_stomach.png')
+
+```
+
+После завершения каждого из тестов проведена коррекция методом Бенджамини-Хохберга (FDR)[5]. 
+
+## Расчеты. 
+```{r, eval=TRUE, echo=TRUE}
+#Соберем новые значения переменных в новый и упорядоченный датафрейм.
+cancer_sq_data <- data.frame (survival = c(sq_surv_breast,sq_surv_bronchus,sq_surv_colon,sq_surv_ovary,sq_surv_stomach),
+                              organ=sort(cancer_data$Organ))
+##Тестирования. Значения p-value будем сохранять в новые переменные----
+#Рак груди и рак бронхов-----
+tt_brst_brnchs <- t.test(survival[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Bronchus']~organ[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Bronchus'], data=cancer_sq_data)
+tt_brst_brnchs
+p_brst_brnchs <- tt_brst_brnchs$p.value
+#Рак груди и рак кишечника-----
+tt_brst_cln <- t.test(survival[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Colon']~organ[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Colon'],data=cancer_sq_data)
+tt_brst_cln
+p_brst_cln <- tt_brst_cln$p.value
+#Рак груди и рак яичников----
+tt_brst_ov <- t.test(survival[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Ovary']~organ[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Ovary'],data=cancer_sq_data)
+tt_brst_ov
+p_brst_ov <- tt_brst_ov$p.value
+#Рак груди и рак желудка----
+tt_brst_stom <- t.test(survival[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Stomach']~organ[cancer_sq_data$organ=='Breast'|cancer_sq_data$organ=='Stomach'],data=cancer_sq_data)
+tt_brst_stom
+p_brst_stom <- tt_brst_stom$p.value
+##Поправка на множественное тестирование----
+p_corr <- p.adjust(p=c(p_brst_brnchs,p_brst_cln,p_brst_ov,p_brst_stom), method='fdr')
+p_corr
+```
+## Результаты и обсуждение. 
+Ниже на рисунке 6 [1] показаны средние значения и доверительные интервалы каждой из выборок (слева), а также квартили и многочисленные (даже после трансформации данных) выбросы (справа). Стоит отметить, что среднее значение выборки больных раком яичников находится наиболее близко с этим же параметром по выборке больных раком груди. Также можно наблюдать, что у первой и четвёртой выборок чрезвычайно большой доверительный интервал, что, вероятно, вызвано большим разбросом значений зависимой переменной. Результаты по каждому из тестирований приведены далее:
+```{r, eval=TRUE, echo=TRUE}
+p_corr
+library(ggplot2)
+library(cowplot)
+theme_set(theme_grey(base_size = 10))
+#График с доверительными интервалами
+gg_ptr <- ggplot(data=cancer_sq_data, aes (x= organ, y= survival)) +
+         stat_summary(geom= 'pointrange',
+                      fun.data = mean_cl_normal) +
+         scale_colour_brewer( palette = 'Set3') + labs(x = 'Поражённый раком орган', y = 'Время выживания')+ scale_x_discrete(labels=c('Грудь','Бронхи','Кишечник','Яичники','Желудок'))+ theme(legend.position ="none",
+                axis.text.x= element_text(angle = 45, hjust = 1), 
+                axis.title = element_text(size=10) )
+#Боксплот
+ gg_bxplt <- ggplot(data=cancer_sq_data) +
+             geom_boxplot(aes(x=organ, y=survival))+
+             theme(legend.position ="none",
+                   axis.text.x= element_text(angle = 45, hjust = 1) )+
+             labs(x = 'Поражённый раком орган',
+                  y = 'Время выживания') +
+             scale_x_discrete(labels=c('Грудь','Бронхи','Кишечник','Яичники','Желудок')) 
+ title <- ggdraw() + 
+   draw_label("Рис.2. Описательная статистика времени выживания больных раком\nпри приеме витамина С",
+     fontface = 'bold', x = 0,
+hjust=0 , size=10  )+
+   theme(plot.margin = margin(0, 0, 0, 7)
+   )
+plot_grid_1 <- plot_grid(gg_ptr, gg_bxplt)
+plot_grid_2 <- plot_grid(title,plot_grid_1, ncol = 1,rel_heights = c(0.2, 1))
+plot_grid_2
+```
+
+1) Гипотезу об отсутствии различий между временем выживания больных раком груди и больных раком бронхов следует отклонить, так как полученное значение p (0.01417) меньше 0.05. Соответственно, альтернативная гипотеза верна и имеются значимые различия.
+
+2) Гипотезу об отсутствии различий между временем выживания больных раком груди и больных раком кишечника также следует отклонить, так как полученное значение p (0.04849) меньше 0.05. Таким образом, альтернативная гипотеза верна и имеются значимые различия.
+
+3) Гипотезу об отсутствии различий между временем выживания больных раком груди и больных раком яичников также следует принять, так как полученное значение p (0.39865) больше 0.05. По этой причине альтернативная гипотеза неверна. Стоит отметить, что объем выборки больных раком яичников был наименьшим, что наталкивает на мысль о том, что не следует делать поспешных выводов на ее основе.
+
+4) Гипотезу об отсутствии различий между временем выживания больных раком груди и больных раком желудка следует отклонить, так как полученное значение p (0.01417) меньше 0.05. Альтернативная гипотеза верна и имеются значимые различия.
+
+## Выводы.
+
+Три из четырех альтернативных гипотез о наличии различий подтвердились, а существенное абсолютное превосходство среднего значения времени выживания в выборке больных раком груди говорит о том, что применение витамина С при лечении онкологических заболеваний наиболее эффективно именно для этой группы пациентов. О том, насколько близок этот показатель по значению у людей с раком яичников, мы бы не выдвигали никаких предположений, поскольку выборки из шести человек недостаточно для адекватной оценки.
+
+## Список литературы
+
+[1] Arranging plots in a grid. (n.d.). Retrieved 10 July 2021, from https://wilkelab.org/cowplot/articles/plot_grid.html
+
+[2] Cameron, E., & Pauling, L. (1978). Supplemental ascorbate in the supportive treatment of cancer: Reevaluation of prolongation of survival times in terminal human cancer. Proceedings of the National Academy of Sciences of the United States of America, 75(9), 4538–4542. https://doi.org/10.1073/pnas.75.9.4538
+
+[3] Витамин С оказался способным побеждать неизлечимые формы рака: Наука: Наука и техника: Lenta.ru. (n.d.). Retrieved 10 July 2021, from https://lenta.ru/news/2015/11/06/vitaminc/
+
+[4] Классические методы статистики: T-критерий Стьюдента. (n.d.). R: Анализ и Визуализация Данных. Retrieved 10 July 2021, from https://r-analytics.blogspot.com/2012/03/t.html
+
+[5] Процедуры множественных проверок гипотез: Метод Беньямини-Хохберга. (n.d.). R: Анализ и Визуализация Данных. Retrieved 10 July 2021, from https://r-analytics.blogspot.com/2013/11/blog-post.html
+
+
+
+
+
